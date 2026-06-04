@@ -1,0 +1,39 @@
+node_modules/
+dist/
+
+# Large binary datasets — never commit. End-user reproduction in README.md.
+*.ply
+*.splat
+*.ksplat
+*.glb
+
+# Source dataset folders downloaded by the user
+Lublin City scan/
+
+# Local data cache: tilesets, manifests, intermediate buffers all live under
+# public/data/ but the directory itself is not tracked (only .gitkeep is).
+/public/data/*
+!/public/data/.gitkeep
+
+# Local working notes — logs, plans, scratchpad. Keep them local.
+claude.md
+plan.md
+logs.md
+
+# Tool / conversion logs — large and machine-specific
+tools/*.log
+tools/**/*.log
+
+# Local diagnostic scratch (extracted SPZ payloads, GLB dumps, etc.)
+tools/tmp/
+
+# Python venv / caches
+.venv/
+__pycache__/
+*.pyc
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
