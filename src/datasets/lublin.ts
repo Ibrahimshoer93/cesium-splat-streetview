@@ -17,10 +17,10 @@ export const LUBLIN: DatasetConfig = {
         // artifacts are skipped for the public demo; full 10-cell split
         // is still in the reproduction recipe in README.
         ionAssetIds: [
-            4913000, // sw_ne_nw
-            4912996, // sw_ne_ne
-            4912991, // sw_ne_sw
-            4912974, // sw_ne_se
+            4913281, // sw_ne_nw
+            4913280, // sw_ne_ne
+            4913283, // sw_ne_sw
+            4913282, // sw_ne_se
         ],
         // Cesium default is 16; we use 24 to ease refinement on the two
         // densest cells where the per-tileset splat aggregation OOM'd at 16.
