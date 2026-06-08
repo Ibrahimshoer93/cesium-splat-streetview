@@ -126,6 +126,4 @@ Cesium 1.141's `KHR_gaussian_splatting` rendering should compose the GLB `nodes[
 3. **Ship the demo with the subsampled tileset** at the cost of density.
 4. **Wait for Cesium-side fix.** PR #13245 closed unmerged but the issue is real; a future release will need to land it.
 
----
 
-Reproduction repository: <local copy at C:\Users\capoom\cesium-gaussian-splatting>
