@@ -6,5 +6,5 @@ export default defineConfig({
   server: {
     port: 3001
   },
-  base: '/cesium-gaussian-splatting/'
+  base: '/cesium-splat-streetview/'
 });

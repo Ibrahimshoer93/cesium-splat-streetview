@@ -34,6 +34,9 @@ tools/**/*.log
 # Local diagnostic scratch (extracted SPZ payloads, GLB dumps, etc.)
 tools/tmp/
 
+# Ion upload archives — staging files created by Compress-Archive
+lublin-cell-*.zip
+
 # Python venv / caches
 .venv/
 __pycache__/

@@ -1,4 +1,4 @@
-# cesium-gaussian-splatting
+# cesium-splat-streetview
 
 Stream city-scale 3D Gaussian Splat reconstructions inside [CesiumJS](https://cesium.com/platform/cesiumjs/) at their real-world geographic location — no Three.js overlay, no custom renderer, just native Cesium 3D Tiles + the [`KHR_gaussian_splatting`](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_gaussian_splatting/README.md) glTF extension.
 
@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3001/cesium-gaussian-splatting/>. Click **▶ Play Demo** for the scripted intro, or **→ Fly to Lublin City 2025 (Poland)** to drop in directly.
+Open <http://localhost:3001/cesium-splat-streetview/>. Click **▶ Play Demo** for the scripted intro, or **→ Fly to Lublin City 2025 (Poland)** to drop in directly.
 
 Keyboard once you're over the city:
 - `R` / `T` — fly forward / back (horizontal, along camera heading)

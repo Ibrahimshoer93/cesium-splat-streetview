@@ -1,5 +1,5 @@
 {
-  "name": "cesium-gaussian-splatting",
+  "name": "cesium-splat-streetview",
   "version": "1.0.0",
   "description": "Cesium + native 3D Gaussian Splatting (KHR_gaussian_splatting) demo",
   "type": "module",
