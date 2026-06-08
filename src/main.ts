@@ -9,6 +9,19 @@ import { pickDatasetFromUrl, type DatasetConfig } from "./datasets";
 import { playDemoFlow, addDemoButton } from "./demo-flow";
 import { setupFlyoverControls } from "./flyover-controls";
 
+// Cesium Ion access token, injected by Vite from `.env` (local) or a GH
+// Actions repo secret (deploy). Required when any dataset uses
+// `ionAssetIds`; ignored for self-hosted tileset URLs.
+const ionToken = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined;
+if (ionToken) {
+    Cesium.Ion.defaultAccessToken = ionToken;
+} else {
+    console.warn(
+        "[ion] VITE_CESIUM_ION_TOKEN is not set. Datasets using Ion asset IDs will fail to load.\n" +
+            "Copy .env.example to .env and paste your token from https://ion.cesium.com/tokens",
+    );
+}
+
 const viewer = new Viewer();
 
 function addAttribution(config: DatasetConfig) {
@@ -56,28 +69,34 @@ async function loadDataset(config: DatasetConfig) {
 
     // Add the 3D Tiles tileset(s). Cesium handles LOD streaming, frustum
     // culling, GPU memory, and the splat decoder — nothing left to babysit.
-    // When `tilesetUrl` is an array we load one Cesium3DTileset per URL and
-    // share the same orientation/altitude fix across them. Used for
-    // bandwidth/quality-balanced multi-chunk splits.
-    const urls = Array.isArray(config.splat.tilesetUrl)
-        ? config.splat.tilesetUrl
-        : [config.splat.tilesetUrl];
-    // Per-tileset cache budget. The Cesium 1.141 GaussianSplatPrimitive
-    // aggregates *all* currently-loaded splats from a tileset into one
-    // Float32 texture buffer, which OOMs the JS heap when two dense cells
-    // (~50 M splats each on Lublin) refine to deep LOD at the same time.
-    // 128 MB/cell (~1.28 GB total) keeps each primitive's buffer well under
-    // the 2 GB ArrayBuffer ceiling. Live override: window.__setCache(GB).
+    // A dataset can use either `tilesetUrl` (self-hosted under public/data/)
+    // or `ionAssetIds` (Cesium Ion). Per-tileset cache budget at 128 MB
+    // keeps the GaussianSplatPrimitive's aggregated Float32 buffer under
+    // the 2 GB ArrayBuffer ceiling even when several dense cells refine
+    // simultaneously. Live override: window.__setCache(GB).
     const perTilesetCacheBytes = 128 * 1024 * 1024;
-    const tilesets = await Promise.all(
-        urls.map((u) =>
-            Cesium.Cesium3DTileset.fromUrl(u, {
-                maximumScreenSpaceError: config.splat.maximumScreenSpaceError ?? 16,
-                cacheBytes: perTilesetCacheBytes,
-                maximumCacheOverflowBytes: Math.floor(perTilesetCacheBytes / 4),
-            }),
-        ),
-    );
+    const opts = {
+        maximumScreenSpaceError: config.splat.maximumScreenSpaceError ?? 16,
+        cacheBytes: perTilesetCacheBytes,
+        maximumCacheOverflowBytes: Math.floor(perTilesetCacheBytes / 4),
+    };
+    let tilesets: Cesium.Cesium3DTileset[];
+    let sourceLabel: string;
+    if (config.splat.ionAssetIds && config.splat.ionAssetIds.length) {
+        tilesets = await Promise.all(
+            config.splat.ionAssetIds.map((id) => Cesium.Cesium3DTileset.fromIonAssetId(id, opts)),
+        );
+        sourceLabel = config.splat.ionAssetIds.map((id) => `ion:${id}`).join(", ");
+    } else if (config.splat.tilesetUrl) {
+        const urls = Array.isArray(config.splat.tilesetUrl)
+            ? config.splat.tilesetUrl
+            : [config.splat.tilesetUrl];
+        tilesets = await Promise.all(urls.map((u) => Cesium.Cesium3DTileset.fromUrl(u, opts)));
+        sourceLabel = urls.join(", ");
+    } else {
+        console.error(`[dispatch] dataset ${config.id} has neither tilesetUrl nor ionAssetIds`);
+        return;
+    }
     const tileset = tilesets[0]; // backwards-compatible alias for the rest of this fn
 
     // Optional orientation fix: multiply root.transform by a local rotation
@@ -165,7 +184,7 @@ async function loadDataset(config: DatasetConfig) {
 
 
     console.log(
-        `%c[dataset] ${config.displayName}\n  loaded ${tilesets.length} tileset(s): ${urls.join("\n    ")}\n  __setSSE(N) to override LOD aggressiveness for all chunks.`,
+        `%c[dataset] ${config.displayName}\n  loaded ${tilesets.length} tileset(s): ${sourceLabel}\n  __setSSE(N) to override LOD aggressiveness for all chunks.`,
         "background:#1a3550;color:#eaf2ff;padding:2px 6px;border-radius:3px;",
     );
 

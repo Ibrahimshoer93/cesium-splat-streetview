@@ -12,22 +12,15 @@ export const LUBLIN: DatasetConfig = {
 
     splat: {
         kind: "tileset",
-        // 10 spatial cells — density-aware split where Lublin's heavily
-        // SW-clustered data gets finer subdivision. Largest cell (sw_ne_se)
-        // is 50.5M splats, under sub4's 65M proven-clean threshold.
-        // Cesium frustum-culls cells outside the camera view, freeing memory
-        // budget to refine the visible ones to deeper LODs.
-        tilesetUrl: [
-            "./data/lublin-cell-nw/tileset.json",
-            "./data/lublin-cell-ne/tileset.json",
-            "./data/lublin-cell-se/tileset.json",
-            "./data/lublin-cell-sw_nw/tileset.json",
-            "./data/lublin-cell-sw_sw/tileset.json",
-            "./data/lublin-cell-sw_se/tileset.json",
-            "./data/lublin-cell-sw_ne_nw/tileset.json",
-            "./data/lublin-cell-sw_ne_ne/tileset.json",
-            "./data/lublin-cell-sw_ne_sw/tileset.json",
-            "./data/lublin-cell-sw_ne_se/tileset.json",
+        // The 4 dense Old Town core cells, hosted on Cesium Ion (~5 GB,
+        // fits the free-tier storage quota). Outer-bbox cells with edge
+        // artifacts are skipped for the public demo; full 10-cell split
+        // is still in the reproduction recipe in README.
+        ionAssetIds: [
+            4913000, // sw_ne_nw
+            4912996, // sw_ne_ne
+            4912991, // sw_ne_sw
+            4912974, // sw_ne_se
         ],
         // Cesium default is 16; we use 24 to ease refinement on the two
         // densest cells where the per-tileset splat aggregation OOM'd at 16.

@@ -6,11 +6,18 @@ export interface DatasetSplatTileset {
     kind: "tileset";
     /** URL of the 3D Tiles `tileset.json` produced by
      *  `3dgs-ply-3dtiles-converter`. Can be a single string OR an array of
-     *  strings when the source PLY has been split into multiple chunks (e.g.
-     *  4 round-robin subsamples that together = full density). Each URL
-     *  loads as its own Cesium3DTileset primitive; they share the same
-     *  geographic anchor and Cesium frustum-culls them together. */
-    tilesetUrl: string | string[];
+     *  strings when the source PLY has been split into multiple chunks.
+     *  Each URL loads as its own Cesium3DTileset primitive; they share the
+     *  same geographic anchor and Cesium frustum-culls them together.
+     *  Use this for self-hosted tilesets in `public/data/`. Mutually
+     *  exclusive with `ionAssetIds`. */
+    tilesetUrl?: string | string[];
+    /** Array of Cesium Ion asset IDs. Each ID loads via
+     *  `Cesium3DTileset.fromIonAssetId` and uses the Ion default access
+     *  token (set from `VITE_CESIUM_ION_TOKEN`). Same orientation/altitude
+     *  fixes apply across all of them. Mutually exclusive with
+     *  `tilesetUrl`. */
+    ionAssetIds?: number[];
     /** Maximum screen-space-error in pixels. Lower = more refinement (more
      *  detail, more memory); higher = coarser. Cesium default is 16. */
     maximumScreenSpaceError?: number;

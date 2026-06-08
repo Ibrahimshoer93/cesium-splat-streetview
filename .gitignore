@@ -20,6 +20,13 @@ claude.md
 plan.md
 logs.md
 
+# Local secrets (Cesium Ion access token, etc.). Use .env.example as the
+# template; the actual .env stays out of git. CI injects the value via
+# repo secrets at build time.
+.env
+.env.local
+.env.*.local
+
 # Tool / conversion logs — large and machine-specific
 tools/*.log
 tools/**/*.log
