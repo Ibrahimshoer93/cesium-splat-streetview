@@ -14,9 +14,14 @@ import type { Viewer } from "./viewer";
 //   Arrows → rotate heading (←/→) and pitch (↑/↓)
 //   Shift  → 5x speed multiplier on any of the above
 
+// Step size scales with altitude — fast at overview height, fine at eye
+// level. At 100 m altitude a normal step is 2 m; at the 1.6 m walker eye
+// height it's clamped to MIN_STEP_M = 0.1 m. Alt = 0.1× (so a 1 cm step
+// at eye level — comfortable for recording street-view waypoints), Shift
+// = 5× (~10 m at overview, half a meter at eye level).
 const ROTATE_DEG = 2;
-const ALT_FRACTION = 0.05; // horizontal step = altitude * this
-const MIN_STEP_M = 1;
+const ALT_FRACTION = 0.02;
+const MIN_STEP_M = 0.1;
 
 function horizontalDirection(camera: Cesium.Camera, headingOffsetDeg: number): Cesium.Cartesian3 {
     // Compute the ECEF direction vector for "forward along camera heading,
@@ -65,7 +70,10 @@ export function setupFlyoverControls(viewer: Viewer): FlyoverControlsHandle {
         const t = e.target as HTMLElement | null;
         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
 
-        const mult = e.shiftKey ? 5 : 1;
+        // Modifier semantics match splat-debug-controls so muscle memory
+        // transfers: Alt = 0.1× (fine), Shift = 5× (coarse), plain = 1×.
+        // Alt and Shift can't usefully combine here; Alt wins if both held.
+        const mult = e.altKey ? 0.1 : (e.shiftKey ? 5 : 1);
         const step = stepFor() * mult;
         const rotateRad = Cesium.Math.toRadians(ROTATE_DEG * mult);
         const altStep = stepFor() * mult;
@@ -76,8 +84,8 @@ export function setupFlyoverControls(viewer: Viewer): FlyoverControlsHandle {
             case "t": case "T": camera.move(horizontalDirection(camera, 180), step); break;
             case "d": case "D": camera.move(horizontalDirection(camera, -90), step); break;
             case "f": case "F": camera.move(horizontalDirection(camera, 90), step); break;
-            case "PageUp":   changeAltitude(camera, altStep); break;
-            case "PageDown": changeAltitude(camera, -altStep); break;
+            case "e": case "E": case "PageUp":   changeAltitude(camera, altStep); break;
+            case "c": case "C": case "PageDown": changeAltitude(camera, -altStep); break;
             case "ArrowLeft":  camera.lookLeft(rotateRad); break;
             case "ArrowRight": camera.lookRight(rotateRad); break;
             case "ArrowUp":    camera.lookUp(rotateRad); break;
@@ -89,7 +97,7 @@ export function setupFlyoverControls(viewer: Viewer): FlyoverControlsHandle {
 
     window.addEventListener("keydown", onKey);
     console.log(
-        "%c[flyover] keys: R/T forward/back · D/F strafe · PgUp/PgDn altitude · Arrows look · Shift = 5x",
+        "%c[flyover] keys: R/T forward/back · D/F strafe · E/C (or PgUp/PgDn) up/down · Arrows look · Alt = 0.1x fine · Shift = 5x coarse",
         "background:#143;color:#cfd;padding:2px 6px;border-radius:3px;",
     );
     return { detach: () => window.removeEventListener("keydown", onKey) };

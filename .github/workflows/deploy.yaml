@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - kinaliada-streetview
 
 permissions:
   contents: read

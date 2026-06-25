@@ -14,6 +14,9 @@ Lublin City scan/
 # public/data/ but the directory itself is not tracked (only .gitkeep is).
 /public/data/*
 !/public/data/.gitkeep
+# Exception: walk-mode waypoint files are small JSON manifests that ship
+# with the build so guided-mode can fetch them at runtime.
+!/public/data/kinaliada-waypoints.json
 
 # Local working notes — logs, plans, scratchpad. Keep them local.
 claude.md

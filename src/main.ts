@@ -8,6 +8,10 @@ import { Viewer } from "./viewer";
 import { pickDatasetFromUrl, type DatasetConfig } from "./datasets";
 import { playDemoFlow, addDemoButton } from "./demo-flow";
 import { setupFlyoverControls } from "./flyover-controls";
+import { setupWalkControls } from "./walk-controls";
+import { setupSplatDebugControls } from "./splat-debug-controls";
+import { setupWaypointEditor } from "./waypoint-editor";
+import { setupGuidedMode } from "./guided-mode";
 
 // Cesium Ion access token, injected by Vite from `.env` (local) or a GH
 // Actions repo secret (deploy). Required when any dataset uses
@@ -70,11 +74,12 @@ async function loadDataset(config: DatasetConfig) {
     // Add the 3D Tiles tileset(s). Cesium handles LOD streaming, frustum
     // culling, GPU memory, and the splat decoder — nothing left to babysit.
     // A dataset can use either `tilesetUrl` (self-hosted under public/data/)
-    // or `ionAssetIds` (Cesium Ion). Per-tileset cache budget at 128 MB
-    // keeps the GaussianSplatPrimitive's aggregated Float32 buffer under
-    // the 2 GB ArrayBuffer ceiling even when several dense cells refine
-    // simultaneously. Live override: window.__setCache(GB).
-    const perTilesetCacheBytes = 128 * 1024 * 1024;
+    // or `ionAssetIds` (Cesium Ion). Per-tileset cache budget at 512 MB —
+    // smaller cache (128 MB) starved aggressive SSE settings, Cesium warned
+    // "more memory than allocated" and auto-coarsened. 512 MB × N tilesets
+    // still leaves comfortable JS heap headroom. Live override:
+    // window.__setCache(GB).
+    const perTilesetCacheBytes = 512 * 1024 * 1024;
     const opts = {
         maximumScreenSpaceError: config.splat.maximumScreenSpaceError ?? 16,
         cacheBytes: perTilesetCacheBytes,
@@ -99,71 +104,19 @@ async function loadDataset(config: DatasetConfig) {
     }
     const tileset = tilesets[0]; // backwards-compatible alias for the rest of this fn
 
-    // Optional orientation fix: multiply root.transform by a local rotation
-    // so PLYs converted with the wrong --input-convention can still load
-    // upright without re-running the (hours-long) conversion. Applied to
-    // every tileset in the (possibly multi-chunk) set.
-    const fix = config.splat.orientationFixDeg;
-    if (fix && (fix.x || fix.y || fix.z)) {
-        const rx = Cesium.Math.toRadians(fix.x ?? 0);
-        const ry = Cesium.Math.toRadians(fix.y ?? 0);
-        const rz = Cesium.Math.toRadians(fix.z ?? 0);
-        const m3 = Cesium.Matrix3.multiply(
-            Cesium.Matrix3.multiply(
-                Cesium.Matrix3.fromRotationX(rx),
-                Cesium.Matrix3.fromRotationY(ry),
-                new Cesium.Matrix3(),
-            ),
-            Cesium.Matrix3.fromRotationZ(rz),
-            new Cesium.Matrix3(),
-        );
-        const fixMat = Cesium.Matrix4.fromRotationTranslation(m3, Cesium.Cartesian3.ZERO);
-        for (const t of tilesets) {
-            t.root.transform = Cesium.Matrix4.multiply(
-                t.root.transform,
-                fixMat,
-                new Cesium.Matrix4(),
-            );
-        }
-        console.log(`[dataset] applied orientationFix (deg) x=${fix.x ?? 0} y=${fix.y ?? 0} z=${fix.z ?? 0} to ${tilesets.length} tileset(s)`);
-    }
-
-    // Track the *baseline* origins (post-rotation, pre-height-shift) per
-    // tileset so the height nudge is always a delta from the converter's
-    // --coordinate value — not cumulative across nudges.
-    const baselineOrigins = tilesets.map((t) =>
-        Cesium.Matrix4.getTranslation(t.root.transform, new Cesium.Cartesian3()),
-    );
-    const applyHeight = (deltaM: number) => {
-        for (let i = 0; i < tilesets.length; i++) {
-            const t = tilesets[i];
-            const origin = baselineOrigins[i];
-            const up = Cesium.Cartesian3.normalize(origin, new Cesium.Cartesian3());
-            const offset = Cesium.Cartesian3.multiplyByScalar(up, deltaM, new Cesium.Cartesian3());
-            const newOrigin = Cesium.Cartesian3.add(origin, offset, new Cesium.Cartesian3());
-            Cesium.Matrix4.setTranslation(t.root.transform, newOrigin, t.root.transform);
-        }
-    };
-
-    const initialHeightM = config.splat.additionalHeightM ?? 0;
-    if (initialHeightM) {
-        applyHeight(initialHeightM);
-        console.log(`[dataset] applied additionalHeightM = ${initialHeightM} m (along local up)`);
-    }
-
-    // Devtools helper for live tuning. Each call replaces the previous shift
-    // (not cumulative) so you can sweep through values quickly. When the
-    // splat sits correctly, paste the printed value into config.splat.additionalHeightM.
-    (window as unknown as { __nudgeHeight: (d: number) => void }).__nudgeHeight = (deltaM: number) => {
-        applyHeight(deltaM);
-        console.log(
-            `[height] set to ${deltaM} m along local up.  Bake into config.splat.additionalHeightM if good.`,
-        );
-    };
-
     for (const t of tilesets) {
         viewer.cesium.scene.primitives.add(t);
     }
+
+    // Alignment controls — owns both the initial bake of
+    // `orientationFixDeg` + `additionalHeightM` (read from config) and the
+    // live keyboard/devtool tuning. Single source of truth so the load
+    // state and the runtime state can never drift.
+    //
+    // Keys: q/w pitch · a/s roll · z/x yaw · y/h N/S · j/g E/W · o/l height
+    // · Alt = 0.1× step · Shift = 10× step · Ctrl+P prints the current
+    // state in copy-paste-ready config form.
+    setupSplatDebugControls(viewer, tilesets, config);
 
     // Expose for devtools poking. __tileset = first (legacy single-tileset
     // helper still works); __tilesets = full array for multi-chunk datasets.
@@ -188,6 +141,10 @@ async function loadDataset(config: DatasetConfig) {
         "background:#1a3550;color:#eaf2ff;padding:2px 6px;border-radius:3px;",
     );
 
+    // Fly-to-overview button: useful for both aerial flyover (Lublin) and
+    // street-view (Kınalıada) — in the latter case it's the "I drifted,
+    // take me back to the overview" shortcut. Always wired when the
+    // dataset has an initialFlyTo.
     addFlyToButton(config, () => {
         if (!viewer.cesium || !config.initialFlyTo) return;
         const fly = config.initialFlyTo;
@@ -201,9 +158,47 @@ async function loadDataset(config: DatasetConfig) {
         );
     });
 
-    addDemoButton(() => playDemoFlow(viewer, config));
+    // Scripted Play Demo intro is Lublin-specific (hardcoded captions
+    // and aerial flyover sequence). Skip for walk-mode datasets.
+    if (!config.walkMode) {
+        addDemoButton(() => playDemoFlow(viewer, config));
+    }
 
+    // Initial camera placement on load so the user lands at the overview.
+    if (viewer.cesium && config.initialFlyTo) {
+        const fly = config.initialFlyTo;
+        viewer.flyTo(
+            fly.lon,
+            fly.lat,
+            fly.height,
+            fly.heading ?? 0,
+            fly.pitch ?? -45,
+            0.0,
+        );
+    }
+
+    // Camera controller. Walk-mode datasets get the guided two-state
+    // experience (overview hides the splat + shows clickable waypoint
+    // balls; POINT mode reveals the splat in a 5 m bubble around the
+    // clicked waypoint, with wheel-up to exit). Other datasets keep
+    // free-fly flyover. Flyover-controls is also active under guided
+    // mode for navigating around the island in OVERVIEW.
     setupFlyoverControls(viewer);
+    if (config.walkMode) {
+        setupGuidedMode(viewer, config.walkMode, tilesets);
+    }
+
+    // Waypoint recorder/editor panel is a dev tool only. Visit
+    // ?dataset=...&dev=1 to surface it for recording or fixing waypoints.
+    // In the demo experience it stays out of the user's way.
+    const devMode = new URLSearchParams(window.location.search).get("dev") === "1";
+    if (config.walkMode && devMode) {
+        setupWaypointEditor(viewer, config.walkMode);
+    }
+
+    // setupWalkControls kept around as a reference fallback (was the
+    // pre-guided radius-locked controller). Not currently called.
+    void setupWalkControls;
 }
 
 if (viewer.cesium) {

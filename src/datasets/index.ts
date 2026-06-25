@@ -1,12 +1,17 @@
 import type { DatasetConfig } from "./types";
 import { LUBLIN } from "./lublin";
+import { KINALIADA } from "./kinaliada";
 
 // Registry of all known datasets, keyed by `id`. Add new datasets by importing
 // their config here and adding an entry to `DATASETS`.
 export const DATASETS: Record<string, DatasetConfig> = {
     [LUBLIN.id]: LUBLIN,
+    [KINALIADA.id]: KINALIADA,
 };
 
+// Default stays on Lublin until Kınalıada's tileset is uploaded to Cesium
+// Ion and `kinaliada.ts:splat.ionAssetIds` is filled in. Flip this to
+// KINALIADA.id in the same commit that adds the Ion asset ID.
 export const DEFAULT_DATASET_ID = LUBLIN.id;
 
 /** Pick a dataset from the URL `?dataset=<id>` query parameter, falling back
