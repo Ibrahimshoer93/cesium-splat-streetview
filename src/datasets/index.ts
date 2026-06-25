@@ -12,7 +12,7 @@ export const DATASETS: Record<string, DatasetConfig> = {
 // Default stays on Lublin until Kınalıada's tileset is uploaded to Cesium
 // Ion and `kinaliada.ts:splat.ionAssetIds` is filled in. Flip this to
 // KINALIADA.id in the same commit that adds the Ion asset ID.
-export const DEFAULT_DATASET_ID = LUBLIN.id;
+export const DEFAULT_DATASET_ID = KINALIADA.id;
 
 /** Pick a dataset from the URL `?dataset=<id>` query parameter, falling back
  *  to the default when missing or unknown. */

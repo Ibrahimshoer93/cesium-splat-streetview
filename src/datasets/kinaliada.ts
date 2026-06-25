@@ -31,7 +31,7 @@ export const KINALIADA: DatasetConfig = {
         // Local dev (current default): tilesetUrl reads the on-disk tiles.
         // Production deploy: comment out tilesetUrl and uncomment ionAssetIds.
         tilesetUrl: "./data/kinaliada-3dtiles/tileset.json",
-        // ionAssetIds: [/* TODO: paste asset ID after Ion upload */],
+        ionAssetIds: [4986600],
         // 8 (vs Cesium default 16) — splat looked coarse at the overview
         // altitude; halving SSE forces earlier refinement at distance.
         // Memory budget headroom is fine (~1 GB tileset on disk).
