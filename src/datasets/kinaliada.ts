@@ -32,10 +32,11 @@ export const KINALIADA: DatasetConfig = {
         // Production deploy: comment out tilesetUrl and uncomment ionAssetIds.
         tilesetUrl: "./data/kinaliada-3dtiles/tileset.json",
         ionAssetIds: [4986600],
-        // 8 (vs Cesium default 16) — splat looked coarse at the overview
-        // altitude; halving SSE forces earlier refinement at distance.
-        // Memory budget headroom is fine (~1 GB tileset on disk).
-        maximumScreenSpaceError: 8,
+        // Cesium default (16). Earlier value of 8 produced visibly sharper
+        // distant LOD on dev hardware but tanked the public demo to <4 fps
+        // on integrated GPUs / older machines. Quality picker in the UI
+        // (Low/Medium/High) lets each user re-tune for their device.
+        maximumScreenSpaceError: 16,
         // +52 m along local ENU up — lifts the splat onto Cesium World
         // Terrain at Kınalıada. Tuned visually after enabling terrain;
         // earlier value of +41 m left several waypoints poking below
